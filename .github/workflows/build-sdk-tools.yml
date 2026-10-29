@@ -35,6 +35,13 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install repo tool
+        run: |
+          mkdir -p ~/.bin
+          echo "${HOME}/.bin" >> $GITHUB_PATH
+          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
+          chmod a+rx ~/.bin/repo
+
       - name: Fetch AOSP sources for target build-tools
         run: |
           # get_source.py 的 --tags 参数对应 AOSP platform-tools-<版本>
