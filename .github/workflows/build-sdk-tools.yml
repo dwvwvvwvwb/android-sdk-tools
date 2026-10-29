@@ -1,0 +1,60 @@
+name: Build android-sdk-tools (aarch64)
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types: [cdda-toolchain-updated]
+
+jobs:
+  parse-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout android-sdk-tools
+        uses: actions/checkout@v4
+
+      - name: Parse CDDA build-tools version (via AGP mapping)
+        id: parse
+        run: |
+          GRADLE=$(curl -fsSL "https://raw.githubusercontent.com/CleverRaven/Cataclysm-DDA/master/android/build.gradle")
+          AGP=$(echo "$GRADLE" | grep -oP "com\.android\.tools\.build:gradle:\K[0-9.]+")
+          PREFIX=$(echo "$AGP" | cut -d. -f1,2)
+          MAP=".github/agp-buildtools-map.txt"
+
+          BT=$(grep -E "^${PREFIX}\.0=" "$MAP" | cut -d= -f2)
+
+          if [ -z "$BT" ]; then
+            echo "::error::AGP $AGP 的系列 ${PREFIX}.x 不在映射表中，请补充 ${PREFIX}.0=... 一行"
+            exit 1
+          fi
+
+          echo "BT=$BT" >> $GITHUB_ENV
+          echo "AGP=$AGP → 系列 ${PREFIX}.0 → build-tools: $BT"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Fetch AOSP sources for target build-tools
+        run: |
+          # get_source.py 的 --tags 参数对应 AOSP platform-tools-<版本>
+          python3 get_source.py --tags "platform-tools-${{ env.BT }}"
+
+      - name: Build aarch64 aapt2 & zipalign
+        run: |
+          # 使用默认 NDK 工具链交叉编译，静态链接
+          python3 build.py \
+            --arch aarch64 \
+            --build build/aarch64 \
+            --target aapt2 zipalign
+
+      - name: Package as tar.xz
+        run: |
+          XZ_OPT="-T0 -9e" tar -cJf build-tools-aarch64.tar.xz -C build/aarch64 .
+          ls -lh build-tools-aarch64.tar.xz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: build-tools-aarch64-bt${{ env.BT }}
+          path: build-tools-aarch64.tar.xz
+          compression-level: 0
