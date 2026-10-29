@@ -36,7 +36,9 @@ jobs:
           python-version: '3.11'
 
       - name: Setup Android SDK CMake
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4.0.4
+        with:
+          packages: ''                                   # 不装任何默认包，避免 tools 报错
 
       - name: Install & use CMake 3.22.1
         run: |
