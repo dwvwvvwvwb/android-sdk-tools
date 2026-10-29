@@ -35,12 +35,14 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install repo tool
+      - name: Setup Android SDK CMake
+        uses: android-actions/setup-android@v3
+
+      - name: Install & use CMake 3.22.1
         run: |
-          mkdir -p ~/.bin
-          echo "${HOME}/.bin" >> $GITHUB_PATH
-          curl https://storage.googleapis.com/git-repo-downloads/repo > ~/.bin/repo
-          chmod a+rx ~/.bin/repo
+          sdkmanager "cmake;3.22.1"
+          echo "CMAKE_BIN=${ANDROID_HOME}/cmake/3.22.1/bin" >> $GITHUB_ENV
+          echo "${ANDROID_HOME}/cmake/3.22.1/bin" >> $GITHUB_PATH
 
       - name: Fetch AOSP sources for target build-tools
         run: |
